@@ -1,5 +1,6 @@
 package com.study.querydsl.entity;
 
+import com.querydsl.core.QueryResults;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import org.assertj.core.api.Assertions;
 import org.junit.jupiter.api.BeforeEach;
@@ -20,9 +21,9 @@ public class QuerydslBasicTest {
     @PersistenceContext
     EntityManager em;
     JPAQueryFactory queryFactory;
-
     @BeforeEach
     public void before() {
+        queryFactory = new JPAQueryFactory(em);
         queryFactory = new JPAQueryFactory(em);
         Team teamA = new Team("teamA");
         Team teamB = new Team("teamB");
@@ -59,5 +60,61 @@ public class QuerydslBasicTest {
                 .where(m.username.eq("member1"))//파라미터 바인딩 처리
                 .fetchOne();
         assertThat(findMember.getUsername()).isEqualTo("member1");
+    }
+
+    @Test
+    public void startQuerydsl3() {
+        //member1을 찾아라.
+        Member findMember = queryFactory
+                .select(member)
+                .from(member)
+                .where(member.username.eq("member1"))
+                .fetchOne();
+        assertThat(findMember.getUsername()).isEqualTo("member1");
+    }
+
+    @Test
+    public void search() {
+        Member findMember = queryFactory
+                .selectFrom(member)
+                .where(member.username.eq("member1")
+                        .and(member.age.eq(10)))
+                .fetchOne();
+        assertThat(findMember.getUsername()).isEqualTo("member1");
+    }
+
+    @Test
+    public void searchAndParam() {
+        List<Member> result1 = queryFactory
+                .selectFrom(member)
+                .where(member.username.eq("member1"),
+                        member.age.eq(10)) // 계속 and 처리 되는 것임
+                .fetch();
+        assertThat(result1.size()).isEqualTo(1);
+    }
+
+    @Test
+    public void resultFetch(){
+//        List<Member> fetch = queryFactory
+//                .selectFrom(member)
+//                .fetch();
+////단 건
+//        Member findMember1 = queryFactory
+//                .selectFrom(member)
+//                .fetchOne();
+////처음 한 건 조회
+//        Member findMember2 = queryFactory
+//                .selectFrom(member)
+//                .fetchFirst();
+//페이징에서 사용
+        QueryResults<Member> results = queryFactory
+                .selectFrom(member)
+                .fetchResults();
+        results.getTotal();
+        List<Member> content = results.getResults();
+//count 쿼리로 변경
+        long count = queryFactory
+                .selectFrom(member)
+                .fetchCount();
     }
 }
