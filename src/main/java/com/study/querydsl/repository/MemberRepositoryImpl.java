@@ -2,15 +2,20 @@ package com.study.querydsl.repository;
 
 import com.querydsl.core.QueryResults;
 import com.querydsl.core.types.dsl.BooleanExpression;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import com.study.querydsl.dto.MemberSearchCondition;
 import com.study.querydsl.dto.MemberTeamDto;
 import com.study.querydsl.dto.QMemberTeamDto;
+import com.study.querydsl.entity.Member;
 import org.springframework.data.domain.PageImpl;
 
 import javax.persistence.EntityManager;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
+import org.springframework.data.jpa.repository.support.QuerydslRepositorySupport;
+import org.springframework.data.support.PageableExecutionUtils;
+
 import java.util.List;
 
 import static com.study.querydsl.entity.QMember.member;
@@ -23,6 +28,10 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom{
     public MemberRepositoryImpl(EntityManager em){
         this.queryFactory = new JPAQueryFactory(em);
     }
+
+//    public MemberRepositoryImpl(){
+//        super(Member.class);
+//    }
 
     //회원명, 팀명, 나이(ageGoe, ageLoe)
     @Override
@@ -85,16 +94,18 @@ public class MemberRepositoryImpl implements MemberRepositoryCustom{
                 .offset(pageable.getOffset())
                 .limit(pageable.getPageSize())
                 .fetch();
-        long total = queryFactory
+        //long total = queryFactory
+        JPAQuery<Member> countQuery = queryFactory
                 .select(member)
                 .from(member)
                 .leftJoin(member.team, team)
                 .where(usernameEq(condition.getUsername()),
                         teamNameEq(condition.getTeamName()),
                         ageGoe(condition.getAgeGoe()),
-                        ageLoe(condition.getAgeLoe()))
-                .fetchCount();
-        return new PageImpl<>(content, pageable, total);
+                        ageLoe(condition.getAgeLoe()));
+                //.fetchCount();
+        return PageableExecutionUtils.getPage(content,pageable, countQuery::fetchCount);
+        //return new PageImpl<>(content, pageable, total);
     }
 
     private BooleanExpression usernameEq(String username) {
